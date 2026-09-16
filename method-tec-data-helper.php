@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: TEC Data Helper
+ * Plugin Name: Method - TEC Data Helper
  * Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
  * Description: This plugin provides a simple block for retrieving event data created by The Events Calendar plugin to aid in custom event templating.
  * Version: 1.0.0
