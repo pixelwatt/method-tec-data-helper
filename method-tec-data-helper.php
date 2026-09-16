@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name: TEC Data Helper
- * Plugin URI: https://github.com/pixelwatt/tec-data-helper
+ * Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
  * Description: This plugin provides a simple block for retrieving event data created by The Events Calendar plugin to aid in custom event templating.
  * Version: 1.0.0
  * Author: Rob Clark
  * Author URI: https://robclark.io
  * License: GPLv2 or later
- * Text Domain: tec-data-helper
- * GitHub Plugin URI: https://github.com/pixelwatt/tec-data-helper
+ * Text Domain: method-tec-data-helper
+ * GitHub Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
  */
 
 register_block_type( 'method/tec-data-helper', [
