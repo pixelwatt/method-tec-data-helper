@@ -3,12 +3,13 @@
  * Plugin Name: Method - TEC Data Helper
  * Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
  * Description: This plugin provides a simple block for retrieving event data created by The Events Calendar plugin to aid in custom event templating.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Rob Clark
  * Author URI: https://robclark.io
  * License: GPLv2 or later
  * Text Domain: method-tec-data-helper
  * GitHub Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
+ * Primary Branch: main
  */
 
 register_block_type( 'method/tec-data-helper', [
@@ -52,10 +53,10 @@ register_block_type( 'method/tec-data-helper', [
             case 'range':
                 // l, F j
                 // g:ia
-                $startDate = tribe_get_start_date( $event, false, 'F j |' );
+                $startDate = tribe_get_start_date( $event, false, $attrs['format'] . ' |' );
                 $startTime = tribe_get_start_date( $event, false, ' g:ia' );
 
-                $endDate = tribe_get_end_date( $event, false, 'F j |' );
+                $endDate = tribe_get_end_date( $event, false, $attrs['format'] . ' |' );
                 $endTime = tribe_get_end_date( $event, false, ' g:ia' );
 
                 $output .= esc_html( $startDate . $startTime . ' - ' . ( $startDate != $endDate ? $endDate : '' ) . $endTime );
