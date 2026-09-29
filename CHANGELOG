@@ -1,0 +1,97 @@
+# CHANGELOG
+
+## v1.0.2
+
+### Map Field — The Event's Venue Map
+
+The block previously had no way to output a map. A new `map` field renders the map for the event's venue, whichever map the site is set up to show.
+
+- **`map` field** — `{"field":"map"}` outputs the venue's map through The Events Calendar's own `tribe_get_embedded_map()`, so the block follows the site's map setup rather than choosing a provider itself.
+- **Google** — with TEC's default API key, Google's basic iframe embed; with a custom Google Maps API key, TEC's JavaScript map, with its scripts enqueued.
+- **Mapbox** — with method-tec-mapbox opted in and a token available, the Mapbox GL map that plugin puts in place of TEC's.
+- **No map** — nothing is output when method-tec-mapbox is opted in without a token, when the event has no venue, or when the venue has no address. With Mapbox, a venue without coordinates also has no map.
+- **Show Map honoured** — nothing is output when TEC's **Enable Maps** setting is off or the event's **Show Map** checkbox is unchecked (`tribe_embed_google_map()`), as in TEC's own templates.
+- **Venue context** — when the block's post is a venue rather than an event, that venue's map is output and its own **Show Map** checkbox is used.
+- **No empty wrapper** — when there is no map the block returns an empty string, without the wrapper element, so a styled wrapper never leaves an empty box. The other fields still output their wrapper when they have nothing to show.
+- **New `mapWidth` and `mapHeight` attributes** — a string holding any CSS length, or a number for pixels. Both are empty by default, which leaves TEC's defaults in place: `100%` wide and `350px` high, filterable through `tribe_events_single_map_default_width` and `tribe_events_single_map_default_height`. Only the `map` field reads them.
+- **Responsive heights** — set `"mapHeight":"100%"` and give the wrapper its height through `wrapperStyle` and `responsiveData`.
+- **New `method_render_event_map( $event_id, $width, $height )`** — the function behind the field, usable on its own. Call it while the template is rendering so the map's scripts and styles are enqueued in time.
+
+### Fixed — `address` Field Fatal Error
+
+The `address` field called `tribe_get_venue_address()`, which The Events Calendar does not define (checked against 6.17.5), so rendering it stopped the page with a fatal error.
+
+- **Now `tribe_get_full_address()`** — the field outputs TEC's address markup: the street address, city, region, postal code, and country inside `<span class="tribe-address">`.
+- **No venue** — an event without a venue outputs that span empty.
+
+### Fixed — Posts That Aren't Events
+
+`tribe_get_event()` returns any post that exists, so the block was not skipped on other post types: the date fields output the current date and time, and the other fields an empty wrapper.
+
+- **Post type check** — the block now outputs nothing unless the post is an event (`Tribe__Events__Main::POSTTYPE`).
+- **`map` excepted** — the `map` field is left out of the check, so it keeps working in a venue's context. On any other post type it outputs nothing.
+
+### Changed — Method Theme No Longer Required
+
+- **Responsive wrapper styles are skipped without Method** — they are only generated when `method_check_array_key()`, `method_get_block_responsive_styles()`, and `method_collect_css()` all exist. Previously a block with both `wrapper` and `wrapperClass` set caused a fatal error when the Method theme wasn't active.
+- **Unchanged** — the wrapper element and its `wrapperId`, `wrapperClass`, and `wrapperStyle` are output either way, and with Method active the responsive styles are generated as before.
+
+### Housekeeping
+
+- **CHANGELOG added** — this file. The entries for 1.0.0 and 1.0.1 were written retrospectively from the commit history.
+- Version bumped to 1.0.2.
+
+---
+
+## v1.0.1
+
+### Range Field — Date Format
+
+- **`format` applies to `range`** — the date in the `range` field is now formatted with the `format` attribute. Previously it was fixed at `F j`, and `format` only affected `start` and `end`.
+- **Unchanged** — the `|` separator between date and time, the `g:ia` time format, and the end date being left out when it matches the start date.
+- **Empty `format`** — leaves the date out, so the range begins with the separator (`| 5:00pm - 8:00pm`). It does not fall back to TEC's date settings the way `start` and `end` do.
+
+### Upgrade Notes
+
+- **`range` blocks without a `format` now include the year.** The attribute defaults to `F j, Y`, so their output changes from `October 2 | 5:00pm - 8:00pm` to `October 2, 2026 | 5:00pm - 8:00pm`. Set `"format":"F j"` to keep the previous output.
+
+### Housekeeping
+
+- `Primary Branch: main` header added for Git Updater.
+- Version bumped to 1.0.1.
+
+---
+
+## v1.0.0
+
+### Initial Release
+
+A server-rendered block, `method/tec-data-helper`, that outputs one piece of an event's data from The Events Calendar, for building event templates in a block theme. Requires The Events Calendar, Event Tickets for the ticket fields, and the Method theme for responsive wrapper styles.
+
+- **Block** — registered in PHP with a render callback and no editor script, and written into templates as block markup: `<!-- wp:method/tec-data-helper {"field":"start"} /-->`.
+- **Event** — read from the `postId` block context, falling back to the current post, so the block follows each post inside a Query Loop. Nothing is output when The Events Calendar is inactive or the post doesn't exist.
+- **`field` attribute** — selects what to output; `start` by default.
+  - `start`, `end` — the start or end date, formatted with `format`.
+  - `range` — the start and end together, as `October 2 | 5:00pm - 8:00pm`. The date is `F j` and the times are `g:ia`. The end date is only included when it differs from the start date: `October 2 | 5:00pm - October 3 | 8:00pm`.
+  - `venue` — the venue's name.
+  - `address` — intended for the venue's address, but not functional; see Known Issues below.
+  - `cost` — the event's cost, with the currency symbol.
+  - `gcal` — the URL that adds the event to Google Calendar. The URL only, not a link.
+  - `tickets` — the Event Tickets purchase form.
+  - `tickets-button` — a button that opens the purchase form in a modal.
+- **`format` attribute** — a PHP date format for `start` and `end`, `F j, Y` by default. When empty, TEC's own date format settings are used.
+- **Wrapper** — `wrapper` names an element to wrap the value in, with `wrapperId`, `wrapperClass`, and `wrapperStyle` as its `id`, `class`, and inline `style`. Without `wrapper` the value is output on its own. The wrapper is output even when the field has nothing to show.
+- **Responsive wrapper styles** — when `wrapper` and `wrapperClass` are set and `responsiveData` holds `cssArgs` and `responsiveSettings`, CSS for the base, mobile, tablet, and wide tiers is generated by Method's `method_get_block_responsive_styles()` and queued through `method_collect_css()` against `.{wrapperClass}`.
+- **`method_render_event_tickets( $event_id )`** — returns the Event Tickets purchase form (`Tribe__Tickets__Tickets_View::get_tickets_block()`), or an empty string when Event Tickets is inactive or the event has no tickets. It is called while the template renders so that Event Tickets can enqueue its scripts, styles, and localized data in time.
+- **`method_event_tickets_modal_button( $event_id )`** — returns a **Tickets** link with the `is-style-theme-button` class and screen-reader text naming the event. It opens a Bootstrap modal, `#eventModal{ID}`, titled "Purchase Tickets for: {event}", so Bootstrap's modal script must be loaded on the page. Nothing is output when the event has no tickets.
+- **Modal placement** — the form is rendered during block rendering, for the same enqueue timing, and only the modal's markup is deferred to `wp_footer`. That puts it directly under `<body>`, outside the Method section block's stacking context, where the modal backdrop would otherwise paint over it. Each event gets one modal per page, however many buttons point to it.
+- **Naming** — the first commit used the name `TEC Data Helper`, the file `tec-data-helper.php`, and the `tec-data-helper` text domain and repository. All were renamed within 1.0.0: the plugin is `Method - TEC Data Helper`, its file is `method-tec-data-helper.php`, and the text domain and repository are `method-tec-data-helper`.
+- **Git Updater** — `GitHub Plugin URI` header.
+
+### Known Issues
+
+All three are present in 1.0.0 and 1.0.1, and fixed in v1.0.2.
+
+- **`address` field** — calls a function The Events Calendar does not define, so rendering the field stops the page with a fatal error.
+- **Posts that aren't events** — the block is not skipped on other post types: the date fields output the current date and time, and the other fields an empty wrapper.
+- **Without the Method theme** — a block with both `wrapper` and `wrapperClass` set causes a fatal error, because the responsive style functions are called without checking that they exist.

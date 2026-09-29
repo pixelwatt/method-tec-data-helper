@@ -3,7 +3,7 @@
  * Plugin Name: Method - TEC Data Helper
  * Plugin URI: https://github.com/pixelwatt/method-tec-data-helper
  * Description: This plugin provides a simple block for retrieving event data created by The Events Calendar plugin to aid in custom event templating.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Rob Clark
  * Author URI: https://robclark.io
  * License: GPLv2 or later
@@ -16,6 +16,8 @@ register_block_type( 'method/tec-data-helper', [
 	'attributes' => [
 		'field'  => [ 'type' => 'string', 'default' => 'start' ],
 		'format' => [ 'type' => 'string', 'default' => 'F j, Y' ],
+		'mapWidth'  => [ 'type' => [ 'string', 'number' ], 'default' => '' ],
+		'mapHeight' => [ 'type' => [ 'string', 'number' ], 'default' => '' ],
         'wrapper' => [ 'type' => 'string', 'default' => '' ],
         'wrapperClass' => [ 'type' => 'string', 'default' => '' ],
 		'wrapperId' => [ 'type' => 'string', 'default' => '' ],
@@ -29,16 +31,20 @@ register_block_type( 'method/tec-data-helper', [
 		$id    = $block->context['postId'] ?? get_the_ID();
 		$event = tribe_get_event( $id );
         $output = '';
-		if ( ! $event ) {
-			return '';
+		if ( ! $event || Tribe__Events__Main::POSTTYPE !== $event->post_type ) {
+			if ( 'map' !== $attrs['field'] ) {
+				return '';
+			}
 		}
         if ( ! empty( $attrs['wrapper'] ) ) {
             $output .= '<' . $attrs['wrapper'] . ( ! empty( $attrs['wrapperId'] ) ? ' id="' . $attrs['wrapperId'] . '"' : '' ) . ( ! empty( $attrs['wrapperClass'] ) ? ' class="' . $attrs['wrapperClass'] . '"' : '' ) . ( ! empty( $attrs['wrapperStyle'] ) ? ' style="' . $attrs['wrapperStyle'] . '"' : '' ) . '>';
 			if ( ! empty( $attrs['wrapperClass'] ) ) {
-				if ( method_check_array_key( $attrs, 'responsiveData' ) ) {
-					if ( ( method_check_array_key( $attrs['responsiveData'], 'cssArgs' ) ) && ( method_check_array_key( $attrs['responsiveData'], 'responsiveSettings' ) ) ) {
-						$responsive = method_get_block_responsive_styles( $attrs['responsiveData'], $attrs['responsiveData']['cssArgs'], array( 'base', 'mobile', 'tablet', 'wide' ), false );
-    					method_collect_css( $responsive, '.' . $attrs['wrapperClass'], 10);
+				if ( ( function_exists( 'method_check_array_key' ) ) && ( function_exists( 'method_get_block_responsive_styles' ) ) && ( function_exists( 'method_collect_css' ) ) ) {
+					if ( method_check_array_key( $attrs, 'responsiveData' ) ) {
+						if ( ( method_check_array_key( $attrs['responsiveData'], 'cssArgs' ) ) && ( method_check_array_key( $attrs['responsiveData'], 'responsiveSettings' ) ) ) {
+							$responsive = method_get_block_responsive_styles( $attrs['responsiveData'], $attrs['responsiveData']['cssArgs'], array( 'base', 'mobile', 'tablet', 'wide' ), false );
+							method_collect_css( $responsive, '.' . $attrs['wrapperClass'], 10);
+						}
 					}
 				}
 			}
@@ -65,7 +71,7 @@ register_block_type( 'method/tec-data-helper', [
 				$output .= esc_html( tribe_get_venue( $event ) );
                 break;
 			case 'address':
-				$output .= tribe_get_venue_address( $event ); // already escaped HTML
+				$output .= tribe_get_full_address( $event ); // already escaped HTML
                 break;
 			case 'cost':
 				$output .= esc_html( tribe_get_cost( $event, true ) );
@@ -78,6 +84,13 @@ register_block_type( 'method/tec-data-helper', [
                 break;
             case 'tickets-button':
                 $output .= method_event_tickets_modal_button( $id );
+                break;
+            case 'map':
+                $map = method_render_event_map( $id, (string) $attrs['mapWidth'], (string) $attrs['mapHeight'] );
+                if ( '' === $map ) {
+                    return ''; // No map to show, so no wrapper either.
+                }
+                $output .= $map;
                 break;
 		}
         if ( ! empty( $attrs['wrapper'] ) ) {
@@ -107,6 +120,35 @@ function method_render_event_tickets( int $event_id = 0 ): string {
 	}
 
 	return Tribe__Tickets__Tickets_View::instance()->get_tickets_block( $event_id, false );
+}
+
+/**
+ * Render the map for an event's venue.
+ *
+ * This goes through The Events Calendar's own embed routine, so the result is
+ * whatever the site is set up to show: TEC's Google map, the Mapbox map that
+ * method-tec-mapbox swaps in, or nothing when Mapbox is opted into without a
+ * token. TEC's "Enable Maps" setting and the event's "Show Map" checkbox are
+ * honoured, as they are in TEC's own templates.
+ *
+ * Call this while the template is rendering, like the ticket form, so the
+ * map's scripts and styles are enqueued in time.
+ *
+ * @param string $width  Any CSS length; a bare number is pixels. Empty for TEC's default (100%).
+ * @param string $height As $width. Empty for TEC's default (350px).
+ */
+function method_render_event_map( int $event_id = 0, string $width = '', string $height = '' ): string {
+	if ( ! function_exists( 'tribe_get_embedded_map' ) ) {
+		return '';
+	}
+
+	$event_id = $event_id ?: get_the_ID();
+
+	if ( ! $event_id || ! tribe_embed_google_map( $event_id ) ) {
+		return '';
+	}
+
+	return trim( (string) tribe_get_embedded_map( $event_id, '' === $width ? null : $width, '' === $height ? null : $height ) );
 }
 
 /**
